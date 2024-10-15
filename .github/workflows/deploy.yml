@@ -1,24 +1,27 @@
-name: Deploy to EC2 for Application Server 01
+name: Deploy to AWS
 
 on:
   push:
-    branches: [main]
+    paths:
+      - app.js  # Sadece app.js dosyası değiştiğinde tetiklenir.
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Deploy to EC2 for Application Server 01
-        env:
-          PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
-          HOST: ${{ secrets.EC2_HOST }}
-          USER: ubuntu
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up AWS CLI
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Copy app.js to AWS Server
         run: |
-          echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
-          ssh -o StrictHostKeyChecking=no -i private_key ${USER}@${HOST} '
-            cd ~/apps/Deploying_Multiple_Node_App_001 &&
-            git pull origin main &&
-            npm install && npm run build &&
-            pm2 stop Node_App_001 || pm2 delete Node_App_001;  pm2 start npm --name "Node_App_001" -- start && pm2 save
-          '
+          # SSH ile bağlanarak eski app.js dosyasını sil ve yenisini kopyala
+          ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_INSTANCE_IP }} "rm /path/to/your/app.js"
+          scp -o StrictHostKeyChecking=no app.js ec2-user@${{ secrets.EC2_INSTANCE_IP }}:/path/to/your/app.js
